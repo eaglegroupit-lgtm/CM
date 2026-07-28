@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local tooling — may contain command history with locally-used credentials
+.claude/
+.dev-server.log
