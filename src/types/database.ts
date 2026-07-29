@@ -259,6 +259,18 @@ export type LedgerWithNature = Ledger & {
 
 // --- Function return rows ---
 
+export type LedgerBalanceRow = {
+  ledger_id: string;
+  name: string;
+  group_id: string;
+  group_name: string;
+  nature: AccountNature;
+  party_type: PartyType;
+  signed_balance: number;
+  debit_balance: number;
+  credit_balance: number;
+}
+
 export type TrialBalanceRow = {
   ledger_id: string;
   name: string;
@@ -338,6 +350,7 @@ export type Database = {
     Functions: {
       create_voucher: { Args: { payload: Record<string, unknown> }; Returns: string };
       cancel_voucher: { Args: { p_voucher_id: string }; Returns: void };
+      ledger_balances: { Args: { p_as_of?: string }; Returns: LedgerBalanceRow[] };
       trial_balance: { Args: { p_as_of?: string }; Returns: TrialBalanceRow[] };
       profit_and_loss: { Args: { p_from: string; p_to: string }; Returns: ProfitAndLossRow[] };
       balance_sheet: { Args: { p_as_of?: string }; Returns: BalanceSheetRow[] };

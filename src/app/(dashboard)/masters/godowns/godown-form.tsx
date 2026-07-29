@@ -15,7 +15,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { EntityDialog } from "@/components/masters/entity-dialog";
 import { createGodown } from "./actions";
+
+export function GodownCreateDialog() {
+  return (
+    <EntityDialog triggerLabel="New Godown" title="Create Godown">
+      {(close) => <GodownForm onDone={close} />}
+    </EntityDialog>
+  );
+}
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),

@@ -22,7 +22,8 @@ import type { VoucherMeta } from "@/lib/accounting/voucher-meta";
 import { isInterstateSupply, splitGst, round2 } from "@/lib/accounting/gst";
 import { formatCurrency } from "@/lib/accounting/format";
 import type { CreateVoucherPayload, InventoryEntryInput, LedgerEntryInput } from "@/lib/accounting/voucher-payload";
-import { postVoucher, getOutstandingBillsForLedger } from "./actions";
+import type { LotBalanceRow } from "@/types/database";
+import { postVoucher, getOutstandingBillsForLedger, getAvailableLotsForItem } from "./actions";
 
 interface Row {
   key: string;
@@ -91,6 +92,7 @@ export function TradingVoucherForm({
 
   const [billId, setBillId] = useState("");
   const [outstandingBills, setOutstandingBills] = useState<{ bill_id: string; bill_no: string; outstanding_amount: number }[]>([]);
+  const [lotsByRow, setLotsByRow] = useState<Record<string, LotBalanceRow[]>>({});
 
   const party = parties.find((p) => p.id === partyId);
   const isReturn = meta.code === "CNOTE" || meta.code === "DNOTE";
@@ -141,6 +143,10 @@ export function TradingVoucherForm({
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   }
 
+  function loadLotsForRow(rowKey: string, itemId: string) {
+    getAvailableLotsForItem(itemId).then((lots) => setLotsByRow((prev) => ({ ...prev, [rowKey]: lots })));
+  }
+
   function addRow() {
     setRows((rs) => [...rs, emptyRow(defaultGodownId)]);
   }
@@ -168,6 +174,16 @@ export function TradingVoucherForm({
     if (isReturn && !billId) {
       toast.error("Select the bill this note is adjusting");
       return null;
+    }
+    if (meta.stockMoveDirection === "out") {
+      for (const r of validRows) {
+        const item = itemsById.get(r.stock_item_id);
+        const availableLots = lotsByRow[r.key] ?? [];
+        if (item?.tracks_lots && availableLots.length > 0 && !r.lot_id) {
+          toast.error(`Select a lot for "${item.name}" — ${availableLots.length} lot(s) available`);
+          return null;
+        }
+      }
     }
 
     const inventory_entries: InventoryEntryInput[] = validRows.map((r) => {
@@ -347,7 +363,14 @@ export function TradingVoucherForm({
                       value={row.stock_item_id}
                       onValueChange={(v) => {
                         if (!v) return;
-                        updateRow(row.key, { stock_item_id: v, rate: itemsById.get(v)?.standard_rate.toString() ?? row.rate });
+                        updateRow(row.key, {
+                          stock_item_id: v,
+                          rate: itemsById.get(v)?.standard_rate.toString() ?? row.rate,
+                          lot_id: "",
+                        });
+                        if (meta.stockMoveDirection === "out" && itemsById.get(v)?.tracks_lots) {
+                          loadLotsForRow(row.key, v);
+                        }
                       }}
                     >
                       <SelectTrigger className="w-full">
@@ -394,11 +417,19 @@ export function TradingVoucherForm({
                           />
                         </div>
                       ) : (
-                        <Input
-                          placeholder="Lot ID to consume"
-                          value={row.lot_id}
-                          onChange={(e) => updateRow(row.key, { lot_id: e.target.value })}
-                        />
+                        <Select value={row.lot_id} onValueChange={(v) => updateRow(row.key, { lot_id: v ?? "" })}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="No specific lot" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(lotsByRow[row.key] ?? []).map((lot) => (
+                              <SelectItem key={lot.lot_id} value={lot.lot_id}>
+                                {lot.lot_no}
+                                {lot.bundle_no ? ` / ${lot.bundle_no}` : ""} — {lot.remaining_qty} left
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>

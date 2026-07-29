@@ -22,7 +22,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { EntityDialog } from "@/components/masters/entity-dialog";
 import { createStaffUser } from "./actions";
+
+export function UserCreateDialog() {
+  return (
+    <EntityDialog triggerLabel="New User" title="Create Staff Login">
+      {(close) => <UserForm onDone={close} />}
+    </EntityDialog>
+  );
+}
 
 const schema = z.object({
   full_name: z.string().min(1, "Name is required"),

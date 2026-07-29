@@ -23,8 +23,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { EntityDialog } from "@/components/masters/entity-dialog";
 import type { StockCategory, UnitOfMeasure } from "@/types/database";
 import { createStockItem } from "./actions";
+
+export function StockItemCreateDialog({
+  categories,
+  units,
+}: {
+  categories: StockCategory[];
+  units: UnitOfMeasure[];
+}) {
+  return (
+    <EntityDialog triggerLabel="New Item" title="Create Stock Item">
+      {(close) => <StockItemForm categories={categories} units={units} onDone={close} />}
+    </EntityDialog>
+  );
+}
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),

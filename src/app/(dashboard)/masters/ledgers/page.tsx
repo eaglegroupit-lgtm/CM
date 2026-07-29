@@ -3,9 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { EntityDialog } from "@/components/masters/entity-dialog";
 import { formatCurrency } from "@/lib/accounting/format";
-import { LedgerForm } from "./ledger-form";
+import { LedgerCreateDialog } from "./ledger-form";
 
 export default async function LedgersPage() {
   const { profile } = await getCurrentProfile();
@@ -21,11 +20,7 @@ export default async function LedgersPage() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Ledgers</CardTitle>
-        {canWrite && (
-          <EntityDialog triggerLabel="New Ledger" title="Create Ledger">
-            {(close) => <LedgerForm groups={groups ?? []} onDone={close} />}
-          </EntityDialog>
-        )}
+        {canWrite && <LedgerCreateDialog groups={groups ?? []} />}
       </CardHeader>
       <CardContent>
         <Table>

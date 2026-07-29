@@ -8,8 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { EntityDialog } from "@/components/masters/entity-dialog";
-import { GroupForm } from "./group-form";
+import { GroupCreateDialog } from "./group-form";
 
 export default async function GroupsPage() {
   await requireRole(["owner", "accountant"]);
@@ -26,9 +25,7 @@ export default async function GroupsPage() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Account Groups</CardTitle>
-        <EntityDialog triggerLabel="New Group" title="Create Account Group">
-          {(close) => <GroupForm groups={all} onDone={close} />}
-        </EntityDialog>
+        <GroupCreateDialog groups={all} />
       </CardHeader>
       <CardContent>
         <Table>

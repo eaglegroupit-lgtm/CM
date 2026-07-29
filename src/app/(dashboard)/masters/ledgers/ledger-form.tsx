@@ -22,8 +22,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { EntityDialog } from "@/components/masters/entity-dialog";
 import type { AccountGroup } from "@/types/database";
 import { createLedger } from "./actions";
+
+export function LedgerCreateDialog({ groups }: { groups: AccountGroup[] }) {
+  return (
+    <EntityDialog triggerLabel="New Ledger" title="Create Ledger">
+      {(close) => <LedgerForm groups={groups} onDone={close} />}
+    </EntityDialog>
+  );
+}
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),

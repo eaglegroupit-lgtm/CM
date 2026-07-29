@@ -3,9 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { EntityDialog } from "@/components/masters/entity-dialog";
 import { formatCurrency, formatNumber } from "@/lib/accounting/format";
-import { StockItemForm } from "./stock-item-form";
+import { StockItemCreateDialog } from "./stock-item-form";
 
 export default async function StockItemsPage() {
   await requireRole(["owner", "accountant"]);
@@ -21,9 +20,7 @@ export default async function StockItemsPage() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Stock Items</CardTitle>
-        <EntityDialog triggerLabel="New Item" title="Create Stock Item">
-          {(close) => <StockItemForm categories={categories ?? []} units={units ?? []} onDone={close} />}
-        </EntityDialog>
+        <StockItemCreateDialog categories={categories ?? []} units={units ?? []} />
       </CardHeader>
       <CardContent>
         <Table>

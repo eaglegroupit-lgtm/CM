@@ -3,8 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { EntityDialog } from "@/components/masters/entity-dialog";
-import { GodownForm } from "./godown-form";
+import { GodownCreateDialog } from "./godown-form";
 
 export default async function GodownsPage() {
   await requireRole(["owner", "accountant"]);
@@ -15,9 +14,7 @@ export default async function GodownsPage() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Godowns</CardTitle>
-        <EntityDialog triggerLabel="New Godown" title="Create Godown">
-          {(close) => <GodownForm onDone={close} />}
-        </EntityDialog>
+        <GodownCreateDialog />
       </CardHeader>
       <CardContent>
         <Table>

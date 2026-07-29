@@ -17,7 +17,7 @@ begin
   if new.lot_id is not null then
     select remaining_qty into v_remaining from lot_balances where lot_id = new.lot_id;
     update stock_lots
-      set status = case when v_remaining <= 0 then 'sold' else 'in_stock' end
+      set status = case when v_remaining <= 0 then 'sold'::lot_status else 'in_stock'::lot_status end
       where id = new.lot_id and status <> 'reserved';
   end if;
   return new;

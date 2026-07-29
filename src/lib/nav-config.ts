@@ -36,6 +36,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: "Masters",
     items: [
+      { title: "Customers", url: "/masters/customers", roles: ALL },
+      { title: "Suppliers", url: "/masters/suppliers", roles: FINANCE },
       { title: "Groups", url: "/masters/groups", roles: FINANCE },
       { title: "Ledgers", url: "/masters/ledgers", roles: ALL },
       { title: "Stock Items", url: "/masters/stock-items", roles: FINANCE },

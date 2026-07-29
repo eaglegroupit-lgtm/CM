@@ -22,8 +22,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { EntityDialog } from "@/components/masters/entity-dialog";
 import type { AccountGroup } from "@/types/database";
 import { createGroup } from "./actions";
+
+// Composing EntityDialog's render-prop children here (inside a Client Component) keeps the
+// function out of the Server Component page's props — Server -> Client props must be
+// serializable, and a function like `(close) => <GroupForm .../>` is not.
+export function GroupCreateDialog({ groups }: { groups: AccountGroup[] }) {
+  return (
+    <EntityDialog triggerLabel="New Group" title="Create Account Group">
+      {(close) => <GroupForm groups={groups} onDone={close} />}
+    </EntityDialog>
+  );
+}
 
 const NATURES = ["asset", "liability", "income", "expense", "equity"] as const;
 
