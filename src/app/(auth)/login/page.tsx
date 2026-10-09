@@ -11,7 +11,7 @@ import {
   Eye,
   EyeOff,
   FileText,
-  Gem,
+  Hammer,
   Loader2,
   Lock,
   Mail,
@@ -42,9 +42,9 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const FEATURES = [
-  { icon: FileText, label: "GST-ready invoicing for every sale" },
-  { icon: Boxes, label: "Slab, tile & quartz inventory by lot" },
-  { icon: ShieldCheck, label: "Role-based access for your whole team" },
+  { icon: FileText, label: "Quick GST bills — cash, UPI or credit" },
+  { icon: Boxes, label: "Plywood & hardware stock with low-stock alerts" },
+  { icon: ShieldCheck, label: "Separate logins for owner, accountant and counter staff" },
 ];
 
 export default function LoginPage() {
@@ -84,20 +84,20 @@ function BrandPanel() {
       <div className="animate-in fade-in slide-in-from-left-4 relative z-10 duration-700">
         <div className="flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-lg bg-amber-400/15 ring-1 ring-amber-300/30">
-            <Gem className="size-4.5 text-amber-300" />
+            <Hammer className="size-4.5 text-amber-300" />
           </div>
           <span className="text-sm font-medium tracking-wide text-white/70">
-            KOVAI MARBLES &amp; GRANITES
+            HARDWARE &amp; PLYWOOD
           </span>
         </div>
       </div>
 
       <div className="animate-in fade-in slide-in-from-left-4 relative z-10 max-w-md duration-700 delay-150 [animation-fill-mode:both]">
         <h1 className="text-4xl font-semibold tracking-tight text-white text-balance">
-          Marbles, granites, tiles &amp; quartz — run entirely from one place.
+          Billing, stock and accounts — simple enough for the counter.
         </h1>
         <p className="mt-4 text-white/55">
-          GST invoicing, lot-wise stock, and complete double-entry accounts for the business.
+          Everything Tally does for your shop, in plain words: sales, purchases, money in and out, and what&apos;s on the shelf.
         </p>
 
         <ul className="mt-9 grid gap-3.5 text-sm text-white/75">
@@ -117,7 +117,7 @@ function BrandPanel() {
       </div>
 
       <div className="animate-in fade-in relative z-10 text-xs text-white/35 duration-700 delay-500 [animation-fill-mode:both]">
-        360/2, Thadagam Main Rd, near J M Hospital, Lakshmi Nagar, Edayarpalayam, Coimbatore — +91 99444 02142
+        Hardware · Plywood · Laminates · Fittings
       </div>
     </div>
   );
@@ -159,15 +159,15 @@ function LoginForm() {
     <div className="animate-in fade-in slide-in-from-bottom-4 w-full max-w-sm duration-700 [animation-fill-mode:both]">
       <div className="mb-8 flex flex-col items-center gap-2 text-center lg:hidden">
         <div className="bg-primary/10 ring-primary/15 flex size-10 items-center justify-center rounded-xl ring-1">
-          <Gem className="text-primary size-5" />
+          <Hammer className="text-primary size-5" />
         </div>
-        <span className="font-semibold">Kovai Marbles &amp; Granites</span>
+        <span className="font-semibold">Hardware &amp; Plywood</span>
       </div>
 
       <div className="mb-7 text-center lg:text-left">
         <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          Sign in to the accounts &amp; inventory platform
+          Sign in to billing &amp; accounts
         </p>
       </div>
 
@@ -187,7 +187,7 @@ function LoginForm() {
                     <InputGroupInput
                       type="email"
                       autoComplete="email"
-                      placeholder="you@kovaimarbles.com"
+                      placeholder="you@example.com"
                       {...field}
                     />
                   </InputGroup>

@@ -33,4 +33,5 @@ export async function createSupplier(input: SupplierInput) {
   });
   if (error) throw new Error(error.message);
   revalidatePath("/masters/suppliers");
+  revalidatePath("/vouchers", "layout");
 }

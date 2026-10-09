@@ -50,6 +50,8 @@ export function GstInvoiceDocument({ data }: { data: GstInvoiceData }) {
   const cgst = taxDetails.find((t) => t.tax_type === "CGST")?.amount ?? 0;
   const sgst = taxDetails.find((t) => t.tax_type === "SGST")?.amount ?? 0;
   const igst = taxDetails.find((t) => t.tax_type === "IGST")?.amount ?? 0;
+  // Bills are rounded to the rupee; show the difference so the totals add up on paper
+  const roundOff = Math.round((totalAmount - (subtotal + cgst + sgst + igst)) * 100) / 100;
 
   return (
     <Document title={`Invoice ${data.voucherNo}`}>
@@ -131,6 +133,12 @@ export function GstInvoiceDocument({ data }: { data: GstInvoiceData }) {
             <View style={styles.totalsRow}>
               <Text>IGST</Text>
               <Text>{rupee(igst)}</Text>
+            </View>
+          )}
+          {roundOff !== 0 && (
+            <View style={styles.totalsRow}>
+              <Text>Round Off</Text>
+              <Text>{roundOff > 0 ? rupee(roundOff) : `- ${rupee(-roundOff)}`}</Text>
             </View>
           )}
           <View style={[styles.totalsRow, { borderTop: "1pt solid #333", fontWeight: 700 }]}>

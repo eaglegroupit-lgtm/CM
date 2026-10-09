@@ -33,4 +33,5 @@ export async function createCustomer(input: CustomerInput) {
   });
   if (error) throw new Error(error.message);
   revalidatePath("/masters/customers");
+  revalidatePath("/vouchers", "layout");
 }

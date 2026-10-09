@@ -1,8 +1,31 @@
 import type { UserRole } from "@/types/database";
 
+/** Icon keys are resolved to components inside the (client) sidebar — components can't cross the RSC boundary. */
+export type NavIcon =
+  | "home"
+  | "sale"
+  | "purchase"
+  | "money-in"
+  | "money-out"
+  | "sale-return"
+  | "purchase-return"
+  | "items"
+  | "customers"
+  | "suppliers"
+  | "accounts"
+  | "day-book"
+  | "statement"
+  | "stock"
+  | "pending"
+  | "profit"
+  | "balance-sheet"
+  | "shop"
+  | "users";
+
 export interface NavItem {
   title: string;
   url: string;
+  icon: NavIcon;
   roles: UserRole[];
 }
 
@@ -17,50 +40,45 @@ const OWNER_ONLY: UserRole[] = ["owner"];
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    title: "Overview",
-    items: [{ title: "Dashboard", url: "/dashboard", roles: ALL }],
+    title: "Home",
+    items: [{ title: "Dashboard", url: "/dashboard", icon: "home", roles: ALL }],
   },
   {
-    title: "Vouchers",
+    title: "Daily Entries",
     items: [
-      { title: "Sales", url: "/vouchers/sales", roles: ALL },
-      { title: "Purchase", url: "/vouchers/purchase", roles: FINANCE },
-      { title: "Payment", url: "/vouchers/payment", roles: FINANCE },
-      { title: "Receipt", url: "/vouchers/receipt", roles: FINANCE },
-      { title: "Journal", url: "/vouchers/journal", roles: FINANCE },
-      { title: "Contra", url: "/vouchers/contra", roles: FINANCE },
-      { title: "Debit Note", url: "/vouchers/debit-note", roles: FINANCE },
-      { title: "Credit Note", url: "/vouchers/credit-note", roles: FINANCE },
+      { title: "New Sale (Bill)", url: "/vouchers/sales", icon: "sale", roles: ALL },
+      { title: "Purchase", url: "/vouchers/purchase", icon: "purchase", roles: FINANCE },
+      { title: "Money Received", url: "/vouchers/receipt", icon: "money-in", roles: FINANCE },
+      { title: "Money Paid / Expenses", url: "/vouchers/payment", icon: "money-out", roles: FINANCE },
+      { title: "Sales Return", url: "/vouchers/credit-note", icon: "sale-return", roles: FINANCE },
+      { title: "Purchase Return", url: "/vouchers/debit-note", icon: "purchase-return", roles: FINANCE },
     ],
   },
   {
-    title: "Masters",
+    title: "Items & Parties",
     items: [
-      { title: "Customers", url: "/masters/customers", roles: ALL },
-      { title: "Suppliers", url: "/masters/suppliers", roles: FINANCE },
-      { title: "Groups", url: "/masters/groups", roles: FINANCE },
-      { title: "Ledgers", url: "/masters/ledgers", roles: ALL },
-      { title: "Stock Items", url: "/masters/stock-items", roles: FINANCE },
-      { title: "Godowns", url: "/masters/godowns", roles: FINANCE },
+      { title: "Items & Stock", url: "/masters/stock-items", icon: "items", roles: FINANCE },
+      { title: "Customers", url: "/masters/customers", icon: "customers", roles: ALL },
+      { title: "Suppliers", url: "/masters/suppliers", icon: "suppliers", roles: FINANCE },
+      { title: "Cash, Bank & Expenses", url: "/masters/ledgers", icon: "accounts", roles: FINANCE },
     ],
   },
   {
     title: "Reports",
     items: [
-      { title: "Day Book", url: "/reports/day-book", roles: ALL },
-      { title: "Ledger", url: "/reports/ledger", roles: FINANCE },
-      { title: "Trial Balance", url: "/reports/trial-balance", roles: FINANCE },
-      { title: "Profit & Loss", url: "/reports/profit-and-loss", roles: FINANCE },
-      { title: "Balance Sheet", url: "/reports/balance-sheet", roles: FINANCE },
-      { title: "Stock Summary", url: "/reports/stock-summary", roles: ALL },
-      { title: "Outstanding", url: "/reports/outstanding", roles: FINANCE },
+      { title: "All Entries (Day Book)", url: "/reports/day-book", icon: "day-book", roles: ALL },
+      { title: "Party Statement", url: "/reports/ledger", icon: "statement", roles: FINANCE },
+      { title: "Stock Report", url: "/reports/stock-summary", icon: "stock", roles: ALL },
+      { title: "Pending Payments", url: "/reports/outstanding", icon: "pending", roles: FINANCE },
+      { title: "Profit & Loss", url: "/reports/profit-and-loss", icon: "profit", roles: FINANCE },
+      { title: "Balance Sheet", url: "/reports/balance-sheet", icon: "balance-sheet", roles: FINANCE },
     ],
   },
   {
     title: "Settings",
     items: [
-      { title: "Company", url: "/settings/company", roles: OWNER_ONLY },
-      { title: "Users", url: "/settings/users", roles: OWNER_ONLY },
+      { title: "Shop Details", url: "/settings/company", icon: "shop", roles: OWNER_ONLY },
+      { title: "Users & Staff", url: "/settings/users", icon: "users", roles: OWNER_ONLY },
     ],
   },
 ];

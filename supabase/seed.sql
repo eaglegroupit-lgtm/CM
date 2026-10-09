@@ -1,13 +1,13 @@
--- Seed data for Kovai Marbles & Granites
+-- Seed data for a hardware & plywood shop
 -- Safe to re-run: every insert is guarded with on conflict do nothing / where not exists.
 
 insert into company_settings (id, name, address, city, state, state_code, pincode, phone, invoice_terms)
 values (
   true,
-  'Kovai Marbles & Granites',
-  '360/2, Thadagam Main Rd, near J M Hospital, Lakshmi Nagar, Edayarpalayam',
-  'Coimbatore', 'Tamil Nadu', '33', '641025', '+91 99444 02142',
-  'Goods once sold will not be taken back. Interest @ 24% p.a. will be charged if the bill is not paid within the due date. Subject to Coimbatore jurisdiction.'
+  'My Hardware & Plywoods',
+  'Shop address (edit in Settings -> Shop Details)',
+  'Coimbatore', 'Tamil Nadu', '33', '', '',
+  'Goods once sold will not be taken back or exchanged. Subject to local jurisdiction.'
 )
 on conflict (id) do nothing;
 
@@ -101,13 +101,35 @@ insert into ledgers (name, group_id, opening_balance, opening_balance_type, part
 select 'Discount Received', id, 0, 'credit', 'none' from account_groups where name = 'Indirect Incomes'
 on conflict (name) do nothing;
 
--- Stock categories matching this business: Marbles, Granites, Tiles, Quartz, Natural Stones
+-- Everyday accounts a shop needs: a bank account, common expense heads and a walk-in customer
+insert into ledgers (name, group_id, opening_balance, opening_balance_type, party_type)
+select 'Bank Account', id, 0, 'debit', 'none' from account_groups where name = 'Bank Accounts'
+on conflict (name) do nothing;
+
+insert into ledgers (name, group_id, opening_balance, opening_balance_type, party_type)
+select x.name, g.id, 0, 'debit', 'none'
+from account_groups g,
+  (values ('Shop Rent'), ('Staff Salary'), ('Electricity Bill'), ('Transport & Freight'),
+          ('Loading & Unloading'), ('Tea & Refreshments'), ('Telephone & Internet'), ('Other Expenses')) as x(name)
+where g.name = 'Indirect Expenses'
+on conflict (name) do nothing;
+
+insert into ledgers (name, group_id, opening_balance, opening_balance_type, party_type, state)
+select 'Walk-in Customer', id, 0, 'debit', 'debtor', 'Tamil Nadu' from account_groups where name = 'Sundry Debtors'
+on conflict (name) do nothing;
+
+-- Stock categories for a hardware & plywood shop
 insert into stock_categories (name) values
-  ('Marble'), ('Granite'), ('Tiles'), ('Quartz'), ('Natural Stones')
+  ('Plywood'), ('Block Board'), ('MDF / HDF / Particle Board'), ('Laminates & Veneers'),
+  ('Doors'), ('Hinges & Channels'), ('Handles, Knobs & Locks'), ('Screws, Nails & Bolts'),
+  ('Adhesives & Polish'), ('Kitchen & Wardrobe Fittings'), ('Edge Band & Profiles'),
+  ('Tools'), ('Other')
 on conflict (name) do nothing;
 
 insert into units_of_measure (name, symbol) values
-  ('Nos', 'Nos'), ('Sq.ft', 'Sqft'), ('Box', 'Box'), ('Slab', 'Slab'), ('Sheet', 'Sheet')
+  ('Nos', 'Nos'), ('Pcs', 'Pcs'), ('Sheet', 'Sheet'), ('Sq.ft', 'Sqft'), ('Box', 'Box'),
+  ('Packet', 'Pkt'), ('Set', 'Set'), ('Pair', 'Pair'), ('Kg', 'Kg'), ('Litre', 'Ltr'),
+  ('Metre', 'Mtr'), ('Roll', 'Roll')
 on conflict (name) do nothing;
 
 insert into godowns (name, is_default) values ('Main Godown', true)

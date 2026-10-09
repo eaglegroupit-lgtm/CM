@@ -2,7 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Building2 } from "lucide-react";
+import {
+  BookOpen,
+  Boxes,
+  Clock,
+  FileUser,
+  HandCoins,
+  Hammer,
+  House,
+  Landmark,
+  LogOut,
+  Package,
+  ReceiptText,
+  Redo2,
+  Scale,
+  ShoppingCart,
+  Store,
+  TrendingUp,
+  Truck,
+  Undo2,
+  UserCog,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,7 +39,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import type { NavGroup } from "@/lib/nav-config";
+import type { NavGroup, NavIcon } from "@/lib/nav-config";
 import type { UserProfile } from "@/types/database";
 import { signOut } from "@/app/(dashboard)/actions";
 
@@ -26,17 +49,47 @@ const ROLE_LABEL: Record<UserProfile["role"], string> = {
   sales_staff: "Sales Staff",
 };
 
-export function AppSidebar({ navGroups, profile }: { navGroups: NavGroup[]; profile: UserProfile }) {
+const ICONS: Record<NavIcon, LucideIcon> = {
+  home: House,
+  sale: ReceiptText,
+  purchase: ShoppingCart,
+  "money-in": HandCoins,
+  "money-out": Wallet,
+  "sale-return": Undo2,
+  "purchase-return": Redo2,
+  items: Package,
+  customers: Users,
+  suppliers: Truck,
+  accounts: Landmark,
+  "day-book": BookOpen,
+  statement: FileUser,
+  stock: Boxes,
+  pending: Clock,
+  profit: TrendingUp,
+  "balance-sheet": Scale,
+  shop: Store,
+  users: UserCog,
+};
+
+export function AppSidebar({
+  navGroups,
+  profile,
+  shopName,
+}: {
+  navGroups: NavGroup[];
+  profile: UserProfile;
+  shopName: string;
+}) {
   const pathname = usePathname();
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1.5">
-          <Building2 className="size-5 shrink-0 text-primary" />
+          <Hammer className="size-5 shrink-0 text-primary" />
           <div className="flex flex-col overflow-hidden group-data-[collapsible=icon]:hidden">
-            <span className="truncate text-sm font-semibold">Kovai Marbles &amp; Granites</span>
-            <span className="truncate text-xs text-muted-foreground">Accounts &amp; Inventory</span>
+            <span className="truncate text-sm font-semibold">{shopName}</span>
+            <span className="truncate text-xs text-muted-foreground">Billing, Stock &amp; Accounts</span>
           </div>
         </div>
       </SidebarHeader>
@@ -46,18 +99,23 @@ export function AppSidebar({ navGroups, profile }: { navGroups: NavGroup[]; prof
             <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton
-                      isActive={pathname.startsWith(item.url)}
-                      render={
-                        <Link href={item.url}>
-                          <span>{item.title}</span>
-                        </Link>
-                      }
-                    />
-                  </SidebarMenuItem>
-                ))}
+                {group.items.map((item) => {
+                  const Icon = ICONS[item.icon];
+                  return (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton
+                        isActive={pathname.startsWith(item.url)}
+                        tooltip={item.title}
+                        render={
+                          <Link href={item.url}>
+                            <Icon />
+                            <span>{item.title}</span>
+                          </Link>
+                        }
+                      />
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

@@ -1,3 +1,4 @@
+import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,6 +48,7 @@ function OutstandingTable({ rows }: { rows: OutstandingRow[] }) {
 }
 
 export default async function OutstandingPage() {
+  await requireRole(["owner", "accountant"]);
   const supabase = await createClient();
   const [{ data: receivables }, { data: payables }] = await Promise.all([
     supabase.from("outstanding_receivables").select("*").order("due_date"),
@@ -59,13 +61,13 @@ export default async function OutstandingPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Outstanding</CardTitle>
+        <CardTitle>Pending Payments</CardTitle>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="receivables">
           <TabsList>
-            <TabsTrigger value="receivables">Receivables ({formatCurrency(totalReceivable)})</TabsTrigger>
-            <TabsTrigger value="payables">Payables ({formatCurrency(totalPayable)})</TabsTrigger>
+            <TabsTrigger value="receivables">Customers owe you ({formatCurrency(totalReceivable)})</TabsTrigger>
+            <TabsTrigger value="payables">You owe suppliers ({formatCurrency(totalPayable)})</TabsTrigger>
           </TabsList>
           <TabsContent value="receivables">
             <OutstandingTable rows={receivables ?? []} />

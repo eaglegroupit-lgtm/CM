@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { HandCoins, ReceiptText, ShoppingCart, Wallet, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +8,9 @@ import { SalesTrendChart, type SalesTrendPoint } from "@/components/dashboard/sa
 import { StockByCategoryChart, type CategoryValuePoint } from "@/components/dashboard/stock-by-category-chart";
 import { AgeingChart, type AgeingBucket } from "@/components/dashboard/ageing-chart";
 import { RecentVouchers } from "@/components/vouchers/recent-vouchers";
-import { formatCurrency } from "@/lib/accounting/format";
+import { Badge } from "@/components/ui/badge";
+import { stockValue } from "@/components/stock/stock-table";
+import { formatCurrency, formatNumber } from "@/lib/accounting/format";
 import { today } from "@/lib/accounting/dates";
 
 export default async function DashboardPage() {
@@ -60,15 +64,16 @@ export default async function DashboardPage() {
 
   const stockByCategory = new Map<string, number>();
   for (const r of stockRows ?? []) {
-    stockByCategory.set(r.category_name, (stockByCategory.get(r.category_name) ?? 0) + r.balance_value);
+    stockByCategory.set(r.category_name, (stockByCategory.get(r.category_name) ?? 0) + stockValue(r));
   }
   const categoryData: CategoryValuePoint[] = Array.from(stockByCategory.entries()).map(([category, value]) => ({
     category,
     value,
   }));
 
-  const totalStockValue = (stockRows ?? []).reduce((s, r) => s + r.balance_value, 0);
-  const lowStockCount = (stockRows ?? []).filter((r) => r.is_low_stock).length;
+  const totalStockValue = (stockRows ?? []).reduce((s, r) => s + stockValue(r), 0);
+  const lowStockItems = (stockRows ?? []).filter((r) => r.is_low_stock);
+  const lowStockCount = lowStockItems.length;
   const totalReceivable = receivables.reduce((s, r) => s + r.outstanding_amount, 0);
   const totalPayable = payables.reduce((s, r) => s + r.outstanding_amount, 0);
 
@@ -88,12 +93,23 @@ export default async function DashboardPage() {
 
   return (
     <div className="grid gap-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <QuickAction href="/vouchers/sales" icon={ReceiptText} label="New Sale" hint="Make a bill" primary />
+        {canSeeFinancials && (
+          <>
+            <QuickAction href="/vouchers/purchase" icon={ShoppingCart} label="Purchase" hint="Stock came in" />
+            <QuickAction href="/vouchers/receipt" icon={HandCoins} label="Money Received" hint="Customer paid" />
+            <QuickAction href="/vouchers/payment" icon={Wallet} label="Money Paid" hint="Supplier / expense" />
+          </>
+        )}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label="Today's Sales" value={formatCurrency(todaysSales)} />
         {canSeeFinancials && (
           <>
-            <StatTile label="Outstanding Receivable" value={formatCurrency(totalReceivable)} />
-            <StatTile label="Outstanding Payable" value={formatCurrency(totalPayable)} />
+            <StatTile label="To Collect (customers owe)" value={formatCurrency(totalReceivable)} />
+            <StatTile label="To Pay (suppliers)" value={formatCurrency(totalPayable)} />
           </>
         )}
         <StatTile
@@ -123,16 +139,47 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {canSeeFinancials && (
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Receivables Ageing</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Low Stock — Reorder Soon</CardTitle>
+            {lowStockCount > 0 && <Badge variant="destructive">{lowStockCount}</Badge>}
           </CardHeader>
           <CardContent>
-            <AgeingChart data={ageingData} />
+            {lowStockItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">All items are above their low-stock level.</p>
+            ) : (
+              <ul className="grid gap-1.5 text-sm">
+                {lowStockItems.slice(0, 8).map((r) => (
+                  <li key={r.item_id} className="flex justify-between gap-2">
+                    <span className="truncate">{r.name}</span>
+                    <span className="tabular-nums text-destructive">
+                      {formatNumber(r.balance_qty)} {r.unit_name}
+                    </span>
+                  </li>
+                ))}
+                {lowStockItems.length > 8 && (
+                  <li>
+                    <Link href="/reports/stock-summary?low=1" className="text-primary hover:underline">
+                      See all {lowStockItems.length} items
+                    </Link>
+                  </li>
+                )}
+              </ul>
+            )}
           </CardContent>
         </Card>
-      )}
+        {canSeeFinancials && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Money to Collect — How Old</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AgeingChart data={ageingData} />
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       <Card>
         <CardHeader>
@@ -143,5 +190,34 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function QuickAction({
+  href,
+  icon: Icon,
+  label,
+  hint,
+  primary,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  hint: string;
+  primary?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-3 rounded-xl border p-4 transition-colors ${
+        primary ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-card hover:bg-accent"
+      }`}
+    >
+      <Icon className="size-6 shrink-0" />
+      <div className="grid">
+        <span className="font-semibold">{label}</span>
+        <span className={`text-xs ${primary ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{hint}</span>
+      </div>
+    </Link>
   );
 }

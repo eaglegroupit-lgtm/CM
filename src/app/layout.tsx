@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kovai Marbles & Granites — Accounts",
-  description: "Accounting, GST invoicing and inventory platform for Kovai Marbles & Granites",
+  title: "Hardware & Plywood — Billing & Accounts",
+  description: "Simple billing, stock and accounts for a hardware & plywood shop",
 };
 
 export default function RootLayout({

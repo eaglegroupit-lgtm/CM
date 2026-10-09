@@ -106,6 +106,7 @@ export type StockItem = {
   hsn_code: string | null;
   gst_rate: number;
   standard_rate: number;
+  purchase_rate: number;
   low_stock_qty: number;
   tracks_lots: boolean;
   thickness_mm: number | null;
@@ -224,6 +225,12 @@ export type StockSummaryRow = {
   balance_value: number;
   low_stock_qty: number;
   is_low_stock: boolean;
+  brand: string | null;
+  size: string | null;
+  thickness_mm: number | null;
+  standard_rate: number;
+  purchase_rate: number;
+  gst_rate: number;
 }
 
 export type LotBalanceRow = {

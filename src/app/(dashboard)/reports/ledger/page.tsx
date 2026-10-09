@@ -1,3 +1,4 @@
+import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,6 +13,7 @@ export default async function LedgerReportPage({
 }: {
   searchParams: Promise<{ ledger_id?: string; from?: string; to?: string }>;
 }) {
+  await requireRole(["owner", "accountant"]);
   const { ledger_id = "", from = financialYearStart(), to = today() } = await searchParams;
   const supabase = await createClient();
   const { data: ledgers } = await supabase.from("ledgers").select("id, name").order("name");
@@ -23,7 +25,7 @@ export default async function LedgerReportPage({
   return (
     <Card>
       <CardHeader className="grid gap-4">
-        <CardTitle>Ledger Account</CardTitle>
+        <CardTitle>Party / Account Statement</CardTitle>
         <form action="/reports/ledger" method="get" className="flex flex-wrap items-end gap-3">
           <div className="grid gap-1.5">
             <Label htmlFor="ledger_id">Ledger</Label>

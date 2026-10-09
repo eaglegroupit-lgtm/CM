@@ -7,10 +7,10 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -27,6 +27,8 @@ import { EntityDialog } from "@/components/masters/entity-dialog";
 import type { StockCategory, UnitOfMeasure } from "@/types/database";
 import { createStockItem } from "./actions";
 
+const GST_RATES = [0, 5, 12, 18, 28];
+
 export function StockItemCreateDialog({
   categories,
   units,
@@ -35,29 +37,27 @@ export function StockItemCreateDialog({
   units: UnitOfMeasure[];
 }) {
   return (
-    <EntityDialog triggerLabel="New Item" title="Create Stock Item">
+    <EntityDialog triggerLabel="New Item" title="Add Item">
       {(close) => <StockItemForm categories={categories} units={units} onDone={close} />}
     </EntityDialog>
   );
 }
 
+const optionalNumber = z.preprocess((v) => (v === "" || v === null ? undefined : v), z.coerce.number().min(0).optional());
+
 const schema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "Item name is required"),
   category_id: z.string().min(1, "Select a category"),
-  item_type: z.enum(["slab", "tile", "quartz", "simple"]),
   unit_id: z.string().min(1, "Select a unit"),
-  hsn_code: z.string().optional(),
-  gst_rate: z.coerce.number().min(0).max(100).default(18),
-  standard_rate: z.coerce.number().min(0).default(0),
-  low_stock_qty: z.coerce.number().min(0).default(0),
-  tracks_lots: z.boolean().default(false),
-  thickness_mm: z.coerce.number().optional(),
-  finish: z.string().optional(),
-  color: z.string().optional(),
-  size: z.string().optional(),
   brand: z.string().optional(),
-  opening_qty: z.coerce.number().min(0).default(0),
-  opening_value: z.coerce.number().min(0).default(0),
+  size: z.string().optional(),
+  thickness_mm: optionalNumber,
+  hsn_code: z.string().optional(),
+  gst_rate: z.coerce.number().min(0).max(100),
+  standard_rate: z.coerce.number().min(0),
+  purchase_rate: z.coerce.number().min(0),
+  opening_qty: z.coerce.number().min(0),
+  low_stock_qty: z.coerce.number().min(0),
 });
 
 type FormInput = z.input<typeof schema>;
@@ -78,28 +78,30 @@ export function StockItemForm({
     defaultValues: {
       name: "",
       category_id: "",
-      item_type: "slab",
-      unit_id: "",
-      hsn_code: "6802",
+      unit_id: units.find((u) => u.name === "Nos")?.id ?? "",
+      brand: "",
+      size: "",
+      thickness_mm: "",
+      hsn_code: "",
       gst_rate: 18,
       standard_rate: 0,
-      low_stock_qty: 0,
-      tracks_lots: true,
+      purchase_rate: 0,
       opening_qty: 0,
-      opening_value: 0,
+      low_stock_qty: 0,
     },
   });
 
-  const itemType = form.watch("item_type");
+  const numberField = (field: { value: unknown }) => ({ value: (field.value as number | string | undefined) ?? "" });
 
   function onSubmit(values: FormValues) {
     startTransition(async () => {
       try {
         await createStockItem(values);
-        toast.success("Stock item created");
+        toast.success("Item added");
+        form.reset();
         onDone();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to create stock item");
+        toast.error(e instanceof Error ? e.message : "Failed to add item");
       }
     });
   }
@@ -114,7 +116,7 @@ export function StockItemForm({
             <FormItem>
               <FormLabel>Item Name</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Tan Brown Granite" {...field} />
+                <Input placeholder="e.g. BWP Marine Plywood / SS Butt Hinge 4 inch" autoFocus {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -130,7 +132,9 @@ export function StockItemForm({
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select category" />
+                      <SelectValue placeholder="Select category">
+                        {(v: string) => categories.find((c) => c.id === v)?.name ?? ""}
+                      </SelectValue>
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -147,23 +151,67 @@ export function StockItemForm({
           />
           <FormField
             control={form.control}
-            name="item_type"
+            name="unit_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Type</FormLabel>
+                <FormLabel>Sold in (unit)</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="w-full">
-                      <SelectValue />
+                      <SelectValue placeholder="Select unit">
+                        {(v: string) => units.find((u) => u.id === v)?.name ?? ""}
+                      </SelectValue>
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="slab">Slab (Marble/Granite)</SelectItem>
-                    <SelectItem value="tile">Tile</SelectItem>
-                    <SelectItem value="quartz">Quartz</SelectItem>
-                    <SelectItem value="simple">Simple (qty + unit)</SelectItem>
+                    {units.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <FormField
+            control={form.control}
+            name="brand"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Brand</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. Greenply" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="size"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Size</FormLabel>
+                <FormControl>
+                  <Input placeholder="8x4 ft / 4 inch" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="thickness_mm"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Thickness (mm)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.1" placeholder="18" {...field} {...numberField(field)} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -172,20 +220,48 @@ export function StockItemForm({
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="unit_id"
+            name="standard_rate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Unit</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <FormLabel>Selling Price (₹)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" {...field} {...numberField(field)} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="purchase_rate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Purchase Price (₹)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" {...field} {...numberField(field)} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="gst_rate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>GST</FormLabel>
+                <Select onValueChange={(v) => field.onChange(Number(v))} value={String(field.value)}>
                   <FormControl>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select unit" />
+                      <SelectValue>{(v: string) => `${v}%`}</SelectValue>
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {units.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name}
+                    {GST_RATES.map((r) => (
+                      <SelectItem key={r} value={String(r)}>
+                        {r}%
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -201,127 +277,7 @@ export function StockItemForm({
               <FormItem>
                 <FormLabel>HSN Code</FormLabel>
                 <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {(itemType === "slab" || itemType === "quartz") && (
-          <div className="grid grid-cols-3 gap-4 rounded-md border p-3">
-            <FormField
-              control={form.control}
-              name="thickness_mm"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Thickness (mm)</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="18" {...field} value={(field.value as number | string | undefined) ?? ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="finish"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Finish</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Polished" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {itemType === "quartz" ? (
-              <FormField
-                control={form.control}
-                name="brand"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Brand</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : (
-              <FormField
-                control={form.control}
-                name="color"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Color/Shade</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-          </div>
-        )}
-
-        {itemType === "tile" && (
-          <div className="grid grid-cols-2 gap-4 rounded-md border p-3">
-            <FormField
-              control={form.control}
-              name="size"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Size (e.g. 600x600)</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="finish"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Finish</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Glossy" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="gst_rate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>GST Rate (%)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" {...field} value={(field.value as number | string | undefined) ?? ""} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="standard_rate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Standard Rate (₹)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" {...field} value={(field.value as number | string | undefined) ?? ""} />
+                  <Input placeholder="Optional, e.g. 4412" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -334,57 +290,31 @@ export function StockItemForm({
             name="opening_qty"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Opening Qty</FormLabel>
+                <FormLabel>Stock in hand now</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} value={(field.value as number | string | undefined) ?? ""} />
+                  <Input type="number" step="any" {...field} {...numberField(field)} />
                 </FormControl>
+                <FormDescription>Valued at the purchase price.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
           <FormField
             control={form.control}
-            name="opening_value"
+            name="low_stock_qty"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Opening Value (₹)</FormLabel>
+                <FormLabel>Warn when stock below</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} value={(field.value as number | string | undefined) ?? ""} />
+                  <Input type="number" step="any" {...field} {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-        <FormField
-          control={form.control}
-          name="low_stock_qty"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Low Stock Alert Qty</FormLabel>
-              <FormControl>
-                <Input type="number" step="0.01" {...field} value={(field.value as number | string | undefined) ?? ""} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="tracks_lots"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center gap-2 space-y-0">
-              <FormControl>
-                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-              </FormControl>
-              <FormLabel className="font-normal">
-                Track by lot/bundle number (recommended for slabs &amp; quartz)
-              </FormLabel>
-            </FormItem>
-          )}
-        />
         <Button type="submit" disabled={isPending}>
-          {isPending ? "Saving..." : "Create Item"}
+          {isPending ? "Saving..." : "Add Item"}
         </Button>
       </form>
     </Form>

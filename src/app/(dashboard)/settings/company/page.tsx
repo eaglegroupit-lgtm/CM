@@ -15,7 +15,7 @@ export default async function CompanySettingsPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Company Settings</CardTitle>
+        <CardTitle>Shop Details</CardTitle>
       </CardHeader>
       <CardContent>
         <CompanyForm company={company} />

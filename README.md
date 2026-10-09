@@ -1,21 +1,24 @@
-# Kovai Marbles & Granites — Accounts & Inventory Platform
+# Hardware & Plywood Shop — Billing, Stock & Accounts
 
-A Tally-equivalent accounting, GST invoicing, and inventory system built for **Kovai
-Marbles & Granites** (Coimbatore). Next.js (App Router) + Supabase (Postgres, Auth,
-RLS) + Vercel.
+Tally-style accounting made simple for a hardware & plywood shop. Next.js (App Router) +
+Supabase (Postgres, Auth, RLS) + Vercel. Proper double-entry accounts run underneath, but
+the screens use plain words — nobody has to pick Debit or Credit.
 
 ## What's included
 
-- Full chart of accounts (Tally-standard groups) and ledgers
-- Voucher types: Sales, Purchase, Payment, Receipt, Journal, Contra, Debit Note, Credit Note
-- Inventory for slabs (marble/granite, lot/bundle + thickness), tiles (size/finish),
-  quartz (brand/batch), and simple qty+unit items
-- GST calculation (CGST+SGST vs IGST by place of supply) and a printable GST tax invoice PDF
-- Bill-by-bill outstanding tracking (receivables & payables) with ageing
-- Reports: Day Book, Ledger, Trial Balance, Profit & Loss, Balance Sheet, Stock Summary, Outstanding
-- Role-based access: Owner (full), Accountant (full ledgers/vouchers/reports, no user
-  management), Sales Staff (Sales vouchers + stock/customer info only)
-- Dashboard with KPIs and charts
+- **New Sale (Bill)** — searchable items, Walk-in Customer by default, Cash / Bank (UPI) /
+  Credit in one step, rates with or without GST, rupee round-off, Save & Print (GST invoice PDF)
+- **Purchase**, **Sales Return**, **Purchase Return** — stock updates automatically
+- **Money Received** / **Money Paid / Expenses** — who, how much, cash or bank; pending bills
+  are settled oldest-first automatically
+- **Items & Stock** — plywood/board/laminate/hardware categories, brand, size, thickness,
+  selling + purchase price, GST %, low-stock alerts
+- **Cash, Bank & Expenses** — balances at a glance; add bank accounts or expense heads
+- Reports: All Entries (Day Book), Party Statement, Stock Report, Pending Payments,
+  Profit & Loss, Balance Sheet
+- Logins: Owner (everything), Accountant (everything except users), Sales Staff (billing only)
+
+Shop name, address, GSTIN and bank details are set in **Settings → Shop Details**.
 
 ## 1. Set up Supabase
 
@@ -71,6 +74,18 @@ npm run dev
 ```
 
 Visit `http://localhost:3000`, sign in with the owner account you created in step 1.
+
+### Demo data (optional, local only)
+
+To try the app with ~10 weeks of realistic entries for a Coimbatore shop (Tamil Nadu customers
+and suppliers, plywood/hardware items, sales, purchases, collections, expenses and returns):
+
+```bash
+npx supabase db reset   # wipes the local database
+npm run seed:demo       # prints the demo logins when done
+```
+
+Never run this against the live database.
 
 ## 4. Deploy to Vercel
 

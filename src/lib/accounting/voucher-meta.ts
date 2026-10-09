@@ -3,6 +3,8 @@ export type VoucherKind = "trading" | "financial";
 export interface VoucherMeta {
   code: string;
   label: string;
+  /** App route of this voucher's entry page (revalidated after posting). */
+  path: string;
   kind: VoucherKind;
   /** For 'trading': which side of the double entry the party ledger sits on. */
   partySide?: "debit" | "credit";
@@ -16,7 +18,8 @@ export interface VoucherMeta {
 export const VOUCHER_META: Record<string, VoucherMeta> = {
   SALE: {
     code: "SALE",
-    label: "Sales",
+    label: "Sale",
+    path: "/vouchers/sales",
     kind: "trading",
     partySide: "debit",
     affectsInventory: true,
@@ -26,6 +29,7 @@ export const VOUCHER_META: Record<string, VoucherMeta> = {
   PURC: {
     code: "PURC",
     label: "Purchase",
+    path: "/vouchers/purchase",
     kind: "trading",
     partySide: "credit",
     affectsInventory: true,
@@ -34,7 +38,8 @@ export const VOUCHER_META: Record<string, VoucherMeta> = {
   },
   CNOTE: {
     code: "CNOTE",
-    label: "Credit Note",
+    label: "Sales Return",
+    path: "/vouchers/credit-note",
     kind: "trading",
     partySide: "credit",
     affectsInventory: true,
@@ -43,7 +48,8 @@ export const VOUCHER_META: Record<string, VoucherMeta> = {
   },
   DNOTE: {
     code: "DNOTE",
-    label: "Debit Note",
+    label: "Purchase Return",
+    path: "/vouchers/debit-note",
     kind: "trading",
     partySide: "debit",
     affectsInventory: true,
@@ -53,6 +59,7 @@ export const VOUCHER_META: Record<string, VoucherMeta> = {
   PMT: {
     code: "PMT",
     label: "Payment",
+    path: "/vouchers/payment",
     kind: "financial",
     billDirection: "payable",
     affectsInventory: false,
@@ -61,22 +68,9 @@ export const VOUCHER_META: Record<string, VoucherMeta> = {
   RCPT: {
     code: "RCPT",
     label: "Receipt",
+    path: "/vouchers/receipt",
     kind: "financial",
     billDirection: "receivable",
-    affectsInventory: false,
-    affectsTax: false,
-  },
-  JRNL: {
-    code: "JRNL",
-    label: "Journal",
-    kind: "financial",
-    affectsInventory: false,
-    affectsTax: false,
-  },
-  CONT: {
-    code: "CONT",
-    label: "Contra",
-    kind: "financial",
     affectsInventory: false,
     affectsTax: false,
   },

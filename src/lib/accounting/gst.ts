@@ -7,7 +7,7 @@ export interface GstSplit {
 
 /**
  * Splits a GST amount into CGST+SGST (intra-state) or IGST (inter-state) based on whether the
- * party's state matches the seller's home state (Tamil Nadu for Kovai Marbles & Granites).
+ * party's state matches the seller's home state (from Settings -> Shop Details).
  */
 export function splitGst(taxableValue: number, gstRate: number, isInterstate: boolean): GstSplit {
   const totalTax = round2((taxableValue * gstRate) / 100);

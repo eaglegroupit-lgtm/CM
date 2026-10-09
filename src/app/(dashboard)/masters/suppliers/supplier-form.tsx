@@ -69,7 +69,7 @@ export function SupplierForm({ onDone }: { onDone: () => void }) {
             <FormItem>
               <FormLabel>Supplier / Company Name</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Rajasthan Marble Quarries" {...field} />
+                <Input placeholder="e.g. Century Plyboards Distributor" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

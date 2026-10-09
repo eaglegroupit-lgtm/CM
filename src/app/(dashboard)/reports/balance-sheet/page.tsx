@@ -1,3 +1,4 @@
+import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableFooter, TableRow } from "@/components/ui/table";
@@ -10,6 +11,7 @@ export default async function BalanceSheetPage({
 }: {
   searchParams: Promise<{ as_of?: string }>;
 }) {
+  await requireRole(["owner", "accountant"]);
   const { as_of = today() } = await searchParams;
   const supabase = await createClient();
   const { data: rows, error } = await supabase.rpc("balance_sheet", { p_as_of: as_of });

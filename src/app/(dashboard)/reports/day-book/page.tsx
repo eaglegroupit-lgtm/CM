@@ -18,7 +18,7 @@ export default async function DayBookPage({
   return (
     <Card>
       <CardHeader className="grid gap-4">
-        <CardTitle>Day Book</CardTitle>
+        <CardTitle>All Entries (Day Book)</CardTitle>
         <DateRangeForm action="/reports/day-book" from={from} to={to} />
       </CardHeader>
       <CardContent>

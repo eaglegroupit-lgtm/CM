@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Printer, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -17,38 +16,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Godown, Ledger, StockItem, UnitOfMeasure } from "@/types/database";
+import { SearchSelect, type SearchOption } from "@/components/search-select";
+import type { Ledger, StockItem, UnitOfMeasure } from "@/types/database";
 import type { VoucherMeta } from "@/lib/accounting/voucher-meta";
+import type { MoneyAccount } from "@/lib/accounting/system-ledgers";
 import { isInterstateSupply, splitGst, round2 } from "@/lib/accounting/gst";
-import { formatCurrency } from "@/lib/accounting/format";
+import { formatCurrency, formatNumber } from "@/lib/accounting/format";
 import type { CreateVoucherPayload, InventoryEntryInput, LedgerEntryInput } from "@/lib/accounting/voucher-payload";
-import type { LotBalanceRow } from "@/types/database";
-import { postVoucher, getOutstandingBillsForLedger, getAvailableLotsForItem } from "./actions";
+import { postVoucher, getOutstandingBillsForLedger } from "./actions";
+
+export const WALK_IN_CUSTOMER = "Walk-in Customer";
+
+/** "credit" = add to the party's account (pay later / adjust against a bill); otherwise a cash/bank ledger id. */
+const ON_ACCOUNT = "credit";
 
 interface Row {
   key: string;
   stock_item_id: string;
-  godown_id: string;
-  lot_id: string;
-  new_lot_no: string;
-  new_bundle_no: string;
-  new_thickness_mm: string;
   quantity: string;
   rate: string;
 }
 
-function emptyRow(defaultGodownId: string): Row {
-  return {
-    key: crypto.randomUUID(),
-    stock_item_id: "",
-    godown_id: defaultGodownId,
-    lot_id: "",
-    new_lot_no: "",
-    new_bundle_no: "",
-    new_thickness_mm: "",
-    quantity: "",
-    rate: "",
-  };
+function emptyRow(): Row {
+  return { key: crypto.randomUUID(), stock_item_id: "", quantity: "", rate: "" };
 }
 
 export function TradingVoucherForm({
@@ -56,17 +46,21 @@ export function TradingVoucherForm({
   partyRole,
   parties,
   stockItems,
+  stockBalances,
   units,
-  godowns,
+  moneyAccounts,
   companyState,
   systemLedgers,
+  addPartyButton,
 }: {
   meta: VoucherMeta;
   partyRole: "customer" | "supplier";
   parties: Ledger[];
   stockItems: StockItem[];
+  /** Current quantity on hand per item id, shown while picking items. */
+  stockBalances: Record<string, number>;
   units: UnitOfMeasure[];
-  godowns: Godown[];
+  moneyAccounts: MoneyAccount[];
   companyState: string;
   systemLedgers: {
     salesAccountId: string;
@@ -77,29 +71,40 @@ export function TradingVoucherForm({
     inputCgstId: string;
     inputSgstId: string;
     inputIgstId: string;
+    roundOffId: string;
   };
+  addPartyButton?: ReactNode;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const defaultGodownId = godowns.find((g) => g.is_default)?.id ?? godowns[0]?.id ?? "";
 
-  const [partyId, setPartyId] = useState("");
+  const isSale = meta.code === "SALE";
+  const isReturn = meta.code === "CNOTE" || meta.code === "DNOTE";
+  const isOutward = meta.code === "SALE" || meta.code === "CNOTE"; // uses the sales-side accounts
+  const walkIn = parties.find((p) => p.name === WALK_IN_CUSTOMER);
+  const cashAccount = moneyAccounts.find((a) => a.isCash) ?? moneyAccounts[0];
+
+  // Counter sales default to walk-in + cash; purchases default to the supplier's account (pay later)
+  const defaultPartyId = isSale ? (walkIn?.id ?? "") : "";
+  const defaultSettle = isSale || isReturn ? (cashAccount?.id ?? ON_ACCOUNT) : ON_ACCOUNT;
+
+  const [partyId, setPartyId] = useState(defaultPartyId);
+  const [settleWith, setSettleWith] = useState(defaultSettle);
   const [voucherDate, setVoucherDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [referenceNo, setReferenceNo] = useState("");
   const [narration, setNarration] = useState("");
   const [isInterstate, setIsInterstate] = useState(false);
-  const [rows, setRows] = useState<Row[]>([emptyRow(defaultGodownId)]);
+  const [pricesIncludeGst, setPricesIncludeGst] = useState(false);
+  const [rows, setRows] = useState<Row[]>([emptyRow()]);
 
   const [billId, setBillId] = useState("");
   const [outstandingBills, setOutstandingBills] = useState<{ bill_id: string; bill_no: string; outstanding_amount: number }[]>([]);
-  const [lotsByRow, setLotsByRow] = useState<Record<string, LotBalanceRow[]>>({});
 
   const party = parties.find((p) => p.id === partyId);
-  const isReturn = meta.code === "CNOTE" || meta.code === "DNOTE";
+  const onAccount = settleWith === ON_ACCOUNT;
 
-  // Reset the interstate flag from the newly selected party's state, right during render
-  // (React's recommended alternative to an effect for "adjust state when a prop changes") —
-  // the Switch below still lets the accountant override the computed value afterward.
+  // Reset the interstate flag from the newly selected party's state during render (React's
+  // recommended alternative to an effect); the switch still allows a manual override.
   const [lastPartyId, setLastPartyId] = useState(partyId);
   if (partyId !== lastPartyId) {
     setLastPartyId(partyId);
@@ -107,9 +112,8 @@ export function TradingVoucherForm({
   }
 
   useEffect(() => {
-    // Legitimate data fetch keyed off the selected party/voucher type; the else branch
-    // just clears stale results from the previous party rather than reacting to new data.
-    if (isReturn && partyId) {
+    // Returns adjusted "on account" must name the original bill; fetch that party's open bills.
+    if (isReturn && onAccount && partyId) {
       const direction = partyRole === "customer" ? "receivable" : "payable";
       getOutstandingBillsForLedger(partyId, direction).then((bills) =>
         setOutstandingBills(bills.map((b) => ({ bill_id: b.bill_id, bill_no: b.bill_no, outstanding_amount: b.outstanding_amount })))
@@ -119,123 +123,114 @@ export function TradingVoucherForm({
       setOutstandingBills([]);
       setBillId("");
     }
-  }, [isReturn, partyId, partyRole]);
+  }, [isReturn, onAccount, partyId, partyRole]);
 
   const itemsById = useMemo(() => new Map(stockItems.map((i) => [i.id, i])), [stockItems]);
   const unitsById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
 
+  const itemOptions: SearchOption[] = useMemo(
+    () =>
+      stockItems.map((it) => {
+        const unit = unitsById.get(it.unit_id);
+        const qty = stockBalances[it.id] ?? 0;
+        return {
+          value: it.id,
+          label: [it.name, it.brand, it.size, it.thickness_mm ? `${it.thickness_mm}mm` : null].filter(Boolean).join(" · "),
+          hint: `${formatNumber(qty)} ${unit?.symbol ?? ""} in stock`,
+        };
+      }),
+    [stockItems, unitsById, stockBalances]
+  );
+
+  const partyOptions: SearchOption[] = useMemo(
+    () => parties.map((p) => ({ value: p.id, label: p.name, hint: p.phone ?? undefined })),
+    [parties]
+  );
+
   const lineTotals = rows.map((r) => {
     const qty = parseFloat(r.quantity) || 0;
     const rate = parseFloat(r.rate) || 0;
-    const amount = round2(qty * rate);
+    const gross = round2(qty * rate);
     const item = itemsById.get(r.stock_item_id);
-    const gst = item ? splitGst(amount, item.gst_rate, isInterstate) : { cgst: 0, sgst: 0, igst: 0, isInterstate };
-    return { qty, rate, amount, gst };
+    const gstRate = item?.gst_rate ?? 0;
+    // When prices include GST, back the tax out so the bill still shows a proper taxable value
+    const taxable = pricesIncludeGst ? round2((gross * 100) / (100 + gstRate)) : gross;
+    const gst = splitGst(taxable, gstRate, isInterstate);
+    return { qty, taxable, gst, lineTotal: round2(taxable + gst.cgst + gst.sgst + gst.igst) };
   });
 
-  const subtotal = round2(lineTotals.reduce((s, l) => s + l.amount, 0));
+  const subtotal = round2(lineTotals.reduce((s, l) => s + l.taxable, 0));
   const totalCgst = round2(lineTotals.reduce((s, l) => s + l.gst.cgst, 0));
   const totalSgst = round2(lineTotals.reduce((s, l) => s + l.gst.sgst, 0));
   const totalIgst = round2(lineTotals.reduce((s, l) => s + l.gst.igst, 0));
-  const grandTotal = round2(subtotal + totalCgst + totalSgst + totalIgst);
+  const exactTotal = round2(subtotal + totalCgst + totalSgst + totalIgst);
+  const grandTotal = Math.round(exactTotal);
+  const roundOff = round2(grandTotal - exactTotal);
 
   function updateRow(key: string, patch: Partial<Row>) {
-    setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
-  }
-
-  function loadLotsForRow(rowKey: string, itemId: string) {
-    getAvailableLotsForItem(itemId).then((lots) => setLotsByRow((prev) => ({ ...prev, [rowKey]: lots })));
-  }
-
-  function addRow() {
-    setRows((rs) => [...rs, emptyRow(defaultGodownId)]);
+    setRows((rs) => {
+      const next = rs.map((r) => (r.key === key ? { ...r, ...patch } : r));
+      // Always keep one blank line at the bottom so the next item can be added straight away
+      const last = next[next.length - 1];
+      return last.stock_item_id ? [...next, emptyRow()] : next;
+    });
   }
 
   function removeRow(key: string) {
-    setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.key !== key) : rs));
+    setRows((rs) => {
+      const next = rs.filter((r) => r.key !== key);
+      return next.length === 0 || next[next.length - 1].stock_item_id ? [...next, emptyRow()] : next;
+    });
   }
 
-  function resolveTaxLedgers(taxAccount: "output" | "input") {
-    return taxAccount === "output"
-      ? { cgst: systemLedgers.outputCgstId, sgst: systemLedgers.outputSgstId, igst: systemLedgers.outputIgstId }
-      : { cgst: systemLedgers.inputCgstId, sgst: systemLedgers.inputSgstId, igst: systemLedgers.inputIgstId };
+  function defaultRateFor(item: StockItem): number {
+    const usesPurchasePrice = meta.code === "PURC" || meta.code === "DNOTE";
+    return usesPurchasePrice ? item.purchase_rate || item.standard_rate : item.standard_rate;
   }
 
-  function buildPayload(status: "draft" | "posted"): CreateVoucherPayload | null {
+  function buildPayload(): CreateVoucherPayload | null {
     if (!partyId) {
-      toast.error("Select a party");
+      toast.error(`Select a ${partyRole}`);
+      return null;
+    }
+    if (onAccount && party?.name === WALK_IN_CUSTOMER) {
+      toast.error("A walk-in customer must pay now. For credit, pick or add the customer by name.");
       return null;
     }
     const validRows = rows.filter((r) => r.stock_item_id && parseFloat(r.quantity) > 0 && parseFloat(r.rate) >= 0);
     if (validRows.length === 0) {
-      toast.error("Add at least one item line");
+      toast.error("Add at least one item with a quantity");
       return null;
     }
-    if (isReturn && !billId) {
-      toast.error("Select the bill this note is adjusting");
+    if (isReturn && onAccount && !billId) {
+      toast.error("Select the bill this return should be adjusted against, or choose a cash/bank refund");
       return null;
-    }
-    if (meta.stockMoveDirection === "out") {
-      for (const r of validRows) {
-        const item = itemsById.get(r.stock_item_id);
-        const availableLots = lotsByRow[r.key] ?? [];
-        if (item?.tracks_lots && availableLots.length > 0 && !r.lot_id) {
-          toast.error(`Select a lot for "${item.name}" — ${availableLots.length} lot(s) available`);
-          return null;
-        }
-      }
     }
 
-    const inventory_entries: InventoryEntryInput[] = validRows.map((r) => {
-      const qty = parseFloat(r.quantity);
-      const rate = parseFloat(r.rate);
-      const item = itemsById.get(r.stock_item_id)!;
-      const entry: InventoryEntryInput = {
-        stock_item_id: r.stock_item_id,
-        godown_id: r.godown_id || defaultGodownId,
-        quantity: qty,
-        rate,
-        amount: round2(qty * rate),
-      };
-      if (r.lot_id) {
-        entry.lot_id = r.lot_id;
-      } else if (item.tracks_lots && r.new_lot_no) {
-        entry.new_lot = {
-          lot_no: r.new_lot_no,
-          bundle_no: r.new_bundle_no || undefined,
-          thickness_mm: r.new_thickness_mm ? parseFloat(r.new_thickness_mm) : undefined,
-        };
-      }
-      return entry;
+    const inventory_entries: InventoryEntryInput[] = rows.flatMap((r, idx) => {
+      if (!validRows.includes(r)) return [];
+      const { qty, taxable } = lineTotals[idx];
+      return [{ stock_item_id: r.stock_item_id, quantity: qty, rate: round2(taxable / qty), amount: taxable }];
     });
 
-    const ledger_entries: LedgerEntryInput[] = [];
-    const taxLedgers = resolveTaxLedgers(meta.code === "SALE" || meta.code === "CNOTE" ? "output" : "input");
-    const tradingLedgerId = meta.code === "SALE" || meta.code === "CNOTE" ? systemLedgers.salesAccountId : systemLedgers.purchaseAccountId;
-
+    const taxLedgers = isOutward
+      ? { cgst: systemLedgers.outputCgstId, sgst: systemLedgers.outputSgstId, igst: systemLedgers.outputIgstId }
+      : { cgst: systemLedgers.inputCgstId, sgst: systemLedgers.inputSgstId, igst: systemLedgers.inputIgstId };
+    const tradingLedgerId = isOutward ? systemLedgers.salesAccountId : systemLedgers.purchaseAccountId;
     const partyDebits = meta.partySide === "debit";
+    const line = (ledger_id: string, amount: number, onPartySide: boolean): LedgerEntryInput => {
+      const debit = onPartySide === partyDebits;
+      return { ledger_id, debit_amount: debit ? amount : 0, credit_amount: debit ? 0 : amount };
+    };
 
-    // Party line
-    ledger_entries.push({
-      ledger_id: partyId,
-      debit_amount: partyDebits ? grandTotal : 0,
-      credit_amount: partyDebits ? 0 : grandTotal,
-    });
-    // Trading account line (Sales/Purchase Account) — opposite side of the party
-    ledger_entries.push({
-      ledger_id: tradingLedgerId,
-      debit_amount: partyDebits ? 0 : subtotal,
-      credit_amount: partyDebits ? subtotal : 0,
-    });
-    if (totalCgst > 0) {
-      ledger_entries.push({ ledger_id: taxLedgers.cgst, debit_amount: partyDebits ? 0 : totalCgst, credit_amount: partyDebits ? totalCgst : 0 });
-    }
-    if (totalSgst > 0) {
-      ledger_entries.push({ ledger_id: taxLedgers.sgst, debit_amount: partyDebits ? 0 : totalSgst, credit_amount: partyDebits ? totalSgst : 0 });
-    }
-    if (totalIgst > 0) {
-      ledger_entries.push({ ledger_id: taxLedgers.igst, debit_amount: partyDebits ? 0 : totalIgst, credit_amount: partyDebits ? totalIgst : 0 });
-    }
+    // Paid now → the cash/bank account takes the party's place (Tally-style cash sale/purchase)
+    const ledger_entries: LedgerEntryInput[] = [line(onAccount ? partyId : settleWith, grandTotal, true)];
+    ledger_entries.push(line(tradingLedgerId, subtotal, false));
+    if (totalCgst > 0) ledger_entries.push(line(taxLedgers.cgst, totalCgst, false));
+    if (totalSgst > 0) ledger_entries.push(line(taxLedgers.sgst, totalSgst, false));
+    if (totalIgst > 0) ledger_entries.push(line(taxLedgers.igst, totalIgst, false));
+    if (roundOff > 0) ledger_entries.push(line(systemLedgers.roundOffId, roundOff, false));
+    if (roundOff < 0) ledger_entries.push(line(systemLedgers.roundOffId, -roundOff, true));
 
     const tax_details = [
       totalCgst > 0 ? { tax_type: "CGST" as const, taxable_value: subtotal, rate: 0, amount: totalCgst } : null,
@@ -251,58 +246,91 @@ export function TradingVoucherForm({
       narration: narration || undefined,
       place_of_supply: party?.state ?? companyState,
       is_interstate: isInterstate,
-      status,
+      status: "posted",
+      total_amount: grandTotal,
       ledger_entries,
       inventory_entries,
       tax_details,
     };
 
-    if (!isReturn) {
+    if (onAccount && !isReturn) {
       payload.new_bill = {
         due_date: party?.credit_days
           ? new Date(new Date(voucherDate).getTime() + party.credit_days * 86400000).toISOString().slice(0, 10)
           : undefined,
       };
-    } else {
+    } else if (onAccount && isReturn) {
       payload.bill_allocations = [{ bill_id: billId, amount: grandTotal }];
     }
 
     return payload;
   }
 
-  function submit(status: "draft" | "posted") {
-    const payload = buildPayload(status);
+  function submit(print: boolean) {
+    const payload = buildPayload();
     if (!payload) return;
+    // Open the tab synchronously so the browser doesn't treat it as an unwanted popup
+    const printWindow = print ? window.open("", "_blank") : null;
     startTransition(async () => {
       try {
-        await postVoucher(payload, `/vouchers/${meta.code.toLowerCase()}`);
-        toast.success(`${meta.label} voucher ${status === "posted" ? "posted" : "saved as draft"}`);
+        const voucherId = await postVoucher(payload, meta.path);
+        toast.success(`${meta.label} saved — ${formatCurrency(grandTotal)}`);
+        if (printWindow) printWindow.location.href = `/api/invoices/${voucherId}/pdf`;
         router.refresh();
-        setRows([emptyRow(defaultGodownId)]);
-        setPartyId("");
+        setRows([emptyRow()]);
+        setPartyId(defaultPartyId);
+        setSettleWith(defaultSettle);
         setReferenceNo("");
         setNarration("");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to save voucher");
+        printWindow?.close();
+        toast.error(e instanceof Error ? e.message : "Failed to save");
       }
     });
   }
 
+  const settleLabel = isReturn
+    ? partyRole === "customer"
+      ? "Refund"
+      : "Refund received"
+    : partyRole === "customer"
+      ? "Payment"
+      : "Paid";
+  const onAccountLabel = isReturn ? "Adjust against a pending bill" : "Credit (pay later)";
+
   return (
     <div className="grid gap-6">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="grid gap-1.5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-1.5 lg:col-span-2">
           <Label>{partyRole === "customer" ? "Customer" : "Supplier"}</Label>
-          <Select value={partyId} onValueChange={(v) => setPartyId(v ?? "")}>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <SearchSelect
+                options={partyOptions}
+                value={partyId}
+                onChange={setPartyId}
+                placeholder={`Search ${partyRole} by name...`}
+              />
+            </div>
+            {addPartyButton}
+          </div>
+        </div>
+        <div className="grid gap-1.5">
+          <Label>{settleLabel}</Label>
+          <Select value={settleWith} onValueChange={(v) => setSettleWith(v ?? ON_ACCOUNT)}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder={`Select ${partyRole}`} />
+              <SelectValue>
+                {(v: string) => (v === ON_ACCOUNT ? onAccountLabel : (moneyAccounts.find((a) => a.id === v)?.name ?? ""))}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {parties.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
+              {moneyAccounts.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                  {a.isCash ? "" : " (UPI / Card / Bank)"}
                 </SelectItem>
               ))}
+              <SelectItem value={ON_ACCOUNT}>{onAccountLabel}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -310,28 +338,21 @@ export function TradingVoucherForm({
           <Label>Date</Label>
           <Input type="date" value={voucherDate} onChange={(e) => setVoucherDate(e.target.value)} />
         </div>
-        <div className="grid gap-1.5">
-          <Label>Reference No.</Label>
-          <Input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} placeholder="Optional" />
-        </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Switch checked={isInterstate} onCheckedChange={setIsInterstate} id="interstate" />
-        <Label htmlFor="interstate">Inter-state supply (IGST instead of CGST+SGST)</Label>
-      </div>
-
-      {isReturn && (
+      {isReturn && onAccount && (
         <div className="grid gap-1.5 sm:max-w-sm">
-          <Label>Against Bill</Label>
+          <Label>Adjust against bill</Label>
           <Select value={billId} onValueChange={(v) => setBillId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select the original bill" />
+              <SelectValue placeholder={partyId ? "Select the original bill" : `Select a ${partyRole} first`}>
+                {(v: string) => outstandingBills.find((b) => b.bill_id === v)?.bill_no ?? ""}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {outstandingBills.map((b) => (
                 <SelectItem key={b.bill_id} value={b.bill_id}>
-                  {b.bill_no} — outstanding {formatCurrency(b.outstanding_amount)}
+                  {b.bill_no} — pending {formatCurrency(b.outstanding_amount)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -343,11 +364,11 @@ export function TradingVoucherForm({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-48">Item</TableHead>
-              <TableHead className="min-w-32">Godown</TableHead>
-              <TableHead className="min-w-40">Lot / Bundle</TableHead>
+              <TableHead className="w-8">#</TableHead>
+              <TableHead className="min-w-64">Item</TableHead>
               <TableHead className="w-28">Qty</TableHead>
-              <TableHead className="w-32">Rate</TableHead>
+              <TableHead className="w-32">Rate (₹)</TableHead>
+              <TableHead className="w-16 text-right">GST</TableHead>
               <TableHead className="w-32 text-right">Amount</TableHead>
               <TableHead className="w-10" />
             </TableRow>
@@ -358,159 +379,132 @@ export function TradingVoucherForm({
               const unit = item ? unitsById.get(item.unit_id) : undefined;
               return (
                 <TableRow key={row.key}>
+                  <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
                   <TableCell>
-                    <Select
+                    <SearchSelect
+                      options={itemOptions}
                       value={row.stock_item_id}
-                      onValueChange={(v) => {
-                        if (!v) return;
+                      placeholder="Search item, brand or size..."
+                      emptyText="No such item — add it under Items & Stock"
+                      onChange={(v) => {
+                        const picked = itemsById.get(v);
+                        if (!picked) return;
                         updateRow(row.key, {
                           stock_item_id: v,
-                          rate: itemsById.get(v)?.standard_rate.toString() ?? row.rate,
-                          lot_id: "",
+                          quantity: row.quantity || "1",
+                          rate: defaultRateFor(picked).toString(),
                         });
-                        if (meta.stockMoveDirection === "out" && itemsById.get(v)?.tracks_lots) {
-                          loadLotsForRow(row.key, v);
-                        }
                       }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select item" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {stockItems.map((it) => (
-                          <SelectItem key={it.id} value={it.id}>
-                            {it.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select value={row.godown_id} onValueChange={(v) => updateRow(row.key, { godown_id: v ?? "" })}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {godowns.map((g) => (
-                          <SelectItem key={g.id} value={g.id}>
-                            {g.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    {item?.tracks_lots ? (
-                      meta.stockMoveDirection === "in" ? (
-                        <div className="flex gap-1">
-                          <Input
-                            placeholder="Lot no."
-                            className="w-20"
-                            value={row.new_lot_no}
-                            onChange={(e) => updateRow(row.key, { new_lot_no: e.target.value })}
-                          />
-                          <Input
-                            placeholder="Bundle"
-                            className="w-20"
-                            value={row.new_bundle_no}
-                            onChange={(e) => updateRow(row.key, { new_bundle_no: e.target.value })}
-                          />
-                        </div>
-                      ) : (
-                        <Select value={row.lot_id} onValueChange={(v) => updateRow(row.key, { lot_id: v ?? "" })}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="No specific lot" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(lotsByRow[row.key] ?? []).map((lot) => (
-                              <SelectItem key={lot.lot_id} value={lot.lot_id}>
-                                {lot.lot_no}
-                                {lot.bundle_no ? ` / ${lot.bundle_no}` : ""} — {lot.remaining_qty} left
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={row.quantity}
-                      onChange={(e) => updateRow(row.key, { quantity: e.target.value })}
                     />
-                    {unit && <span className="text-xs text-muted-foreground">{unit.symbol}</span>}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={row.quantity}
+                        onChange={(e) => updateRow(row.key, { quantity: e.target.value })}
+                      />
+                      {unit && <span className="text-xs text-muted-foreground">{unit.symbol}</span>}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Input
                       type="number"
                       step="0.01"
+                      min="0"
                       value={row.rate}
                       onChange={(e) => updateRow(row.key, { rate: e.target.value })}
                     />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(lineTotals[idx]?.amount ?? 0)}</TableCell>
+                  <TableCell className="text-right text-muted-foreground tabular-nums">
+                    {item ? `${item.gst_rate}%` : ""}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {row.stock_item_id ? formatCurrency(lineTotals[idx]?.lineTotal ?? 0) : ""}
+                  </TableCell>
                   <TableCell>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeRow(row.key)}>
-                      <Trash2 className="size-4" />
-                    </Button>
+                    {row.stock_item_id && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeRow(row.key)} title="Remove line">
+                        <Trash2 className="size-4" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
-        <div className="p-2">
-          <Button type="button" variant="outline" size="sm" onClick={addRow}>
-            <Plus className="size-4" />
-            Add Row
-          </Button>
-        </div>
       </div>
 
-      <div className="grid gap-1.5">
-        <Label>Narration</Label>
-        <Textarea value={narration} onChange={(e) => setNarration(e.target.value)} rows={2} />
-      </div>
-
-      <div className="ml-auto grid w-full max-w-xs gap-1 text-sm">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Subtotal</span>
-          <span className="tabular-nums">{formatCurrency(subtotal)}</span>
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid content-start gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label>{partyRole === "supplier" ? "Supplier's bill no." : "Reference / Vehicle no."}</Label>
+              <Input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} placeholder="Optional" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Note</Label>
+              <Input value={narration} onChange={(e) => setNarration(e.target.value)} placeholder="Optional" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={pricesIncludeGst} onCheckedChange={setPricesIncludeGst} id="incl-gst" />
+            <Label htmlFor="incl-gst" className="font-normal">Rates include GST</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={isInterstate} onCheckedChange={setIsInterstate} id="interstate" />
+            <Label htmlFor="interstate" className="font-normal">Other-state party (IGST)</Label>
+          </div>
         </div>
-        {totalCgst > 0 && (
+
+        <div className="grid content-start gap-1 text-sm md:ml-auto md:w-72">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">CGST</span>
-            <span className="tabular-nums">{formatCurrency(totalCgst)}</span>
+            <span className="text-muted-foreground">Taxable value</span>
+            <span className="tabular-nums">{formatCurrency(subtotal)}</span>
           </div>
-        )}
-        {totalSgst > 0 && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">SGST</span>
-            <span className="tabular-nums">{formatCurrency(totalSgst)}</span>
+          {totalCgst > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">CGST</span>
+              <span className="tabular-nums">{formatCurrency(totalCgst)}</span>
+            </div>
+          )}
+          {totalSgst > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">SGST</span>
+              <span className="tabular-nums">{formatCurrency(totalSgst)}</span>
+            </div>
+          )}
+          {totalIgst > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">IGST</span>
+              <span className="tabular-nums">{formatCurrency(totalIgst)}</span>
+            </div>
+          )}
+          {roundOff !== 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Round off</span>
+              <span className="tabular-nums">{formatCurrency(roundOff)}</span>
+            </div>
+          )}
+          <div className="mt-1 flex justify-between border-t pt-2 text-xl font-semibold">
+            <span>Total</span>
+            <span className="tabular-nums">{formatCurrency(grandTotal)}</span>
           </div>
-        )}
-        {totalIgst > 0 && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">IGST</span>
-            <span className="tabular-nums">{formatCurrency(totalIgst)}</span>
-          </div>
-        )}
-        <div className="flex justify-between border-t pt-1 font-semibold">
-          <span>Total</span>
-          <span className="tabular-nums">{formatCurrency(grandTotal)}</span>
         </div>
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" disabled={isPending} onClick={() => submit("draft")}>
-          Save as Draft
-        </Button>
-        <Button type="button" disabled={isPending} onClick={() => submit("posted")}>
-          {isPending ? "Posting..." : "Post Voucher"}
+        {isSale && (
+          <Button type="button" variant="outline" size="lg" disabled={isPending} onClick={() => submit(true)}>
+            <Printer className="size-4" />
+            Save &amp; Print
+          </Button>
+        )}
+        <Button type="button" size="lg" disabled={isPending} onClick={() => submit(false)}>
+          {isPending ? "Saving..." : `Save ${meta.label}`}
         </Button>
       </div>
     </div>

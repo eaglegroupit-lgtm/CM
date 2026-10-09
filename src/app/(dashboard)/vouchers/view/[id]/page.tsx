@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/accounting/format";
-import { FileDown } from "lucide-react";
+import { Printer } from "lucide-react";
 
 export default async function VoucherViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -22,7 +22,7 @@ export default async function VoucherViewPage({ params }: { params: Promise<{ id
 
   const [{ data: ledgerLines }, { data: invLines }, { data: taxLines }] = await Promise.all([
     supabase.from("voucher_ledger_entries").select("*, ledgers(name)").eq("voucher_id", id),
-    supabase.from("voucher_inventory_entries").select("*, stock_items(name), godowns(name)").eq("voucher_id", id),
+    supabase.from("voucher_inventory_entries").select("*, stock_items(name)").eq("voucher_id", id),
     supabase.from("voucher_tax_details").select("*").eq("voucher_id", id),
   ]);
 
@@ -51,8 +51,8 @@ export default async function VoucherViewPage({ params }: { params: Promise<{ id
                 variant="outline"
                 render={
                   <Link href={`/api/invoices/${voucher.id}/pdf`} target="_blank">
-                    <FileDown className="size-4" />
-                    GST Invoice PDF
+                    <Printer className="size-4" />
+                    Print Bill
                   </Link>
                 }
               />
@@ -61,7 +61,7 @@ export default async function VoucherViewPage({ params }: { params: Promise<{ id
         </CardHeader>
         <CardContent className="grid gap-1 text-sm">
           {voucher.reference_no && <p><span className="text-muted-foreground">Reference:</span> {voucher.reference_no}</p>}
-          {voucher.narration && <p><span className="text-muted-foreground">Narration:</span> {voucher.narration}</p>}
+          {voucher.narration && <p><span className="text-muted-foreground">Note:</span> {voucher.narration}</p>}
           <p className="text-lg font-semibold">Total: {formatCurrency(voucher.total_amount)}</p>
         </CardContent>
       </Card>
@@ -76,17 +76,15 @@ export default async function VoucherViewPage({ params }: { params: Promise<{ id
               <TableHeader>
                 <TableRow>
                   <TableHead>Item</TableHead>
-                  <TableHead>Godown</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Rate</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(invLines as unknown as { id: string; stock_items: { name: string }; godowns: { name: string }; quantity: number; rate: number; amount: number }[]).map((l) => (
+                {(invLines as unknown as { id: string; stock_items: { name: string }; quantity: number; rate: number; amount: number }[]).map((l) => (
                   <TableRow key={l.id}>
                     <TableCell>{l.stock_items.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{l.godowns.name}</TableCell>
                     <TableCell className="text-right tabular-nums">{l.quantity}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(l.rate)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(l.amount)}</TableCell>
@@ -99,10 +97,11 @@ export default async function VoucherViewPage({ params }: { params: Promise<{ id
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Ledger Entries</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <details>
+        <summary className="cursor-pointer px-6 text-sm font-medium text-muted-foreground">
+          Accounting entries (for your accountant)
+        </summary>
+        <CardContent className="pt-4">
           <Table>
             <TableHeader>
               <TableRow>
@@ -122,6 +121,7 @@ export default async function VoucherViewPage({ params }: { params: Promise<{ id
             </TableBody>
           </Table>
         </CardContent>
+        </details>
       </Card>
 
       {taxLines && taxLines.length > 0 && (

@@ -9,9 +9,8 @@ export type LedgerEntryInput = {
 
 export type InventoryEntryInput = {
   stock_item_id: string;
-  lot_id?: string | null;
-  new_lot?: { lot_no: string; bundle_no?: string; thickness_mm?: number } | null;
-  godown_id: string;
+  /** Filled in server-side with the shop's default stock location when omitted. */
+  godown_id?: string;
   quantity: number;
   rate: number;
   amount: number;
@@ -33,6 +32,8 @@ export type CreateVoucherPayload = {
   place_of_supply?: string;
   is_interstate?: boolean;
   status: VoucherStatus;
+  /** Bill/voucher total; defaults to the summed debits when omitted. */
+  total_amount?: number;
   ledger_entries: LedgerEntryInput[];
   inventory_entries?: InventoryEntryInput[];
   tax_details?: TaxDetailInput[];
