@@ -20,13 +20,16 @@ export type NavIcon =
   | "profit"
   | "balance-sheet"
   | "shop"
-  | "users";
+  | "users"
+  | "guide";
 
 export interface NavItem {
   title: string;
   url: string;
   icon: NavIcon;
   roles: UserRole[];
+  /** Opens in a new tab (static pages outside the app shell). */
+  external?: boolean;
 }
 
 export interface NavGroup {
@@ -80,6 +83,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { title: "Shop Details", url: "/settings/company", icon: "shop", roles: OWNER_ONLY },
       { title: "Users & Staff", url: "/settings/users", icon: "users", roles: OWNER_ONLY },
     ],
+  },
+  {
+    title: "Help",
+    items: [{ title: "How to Use (Guide)", url: "/guide", icon: "guide", roles: ALL, external: true }],
   },
 ];
 

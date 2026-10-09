@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen,
   Boxes,
+  CircleHelp,
   Clock,
   FileUser,
   HandCoins,
@@ -69,6 +70,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   "balance-sheet": Scale,
   shop: Store,
   users: UserCog,
+  guide: CircleHelp,
 };
 
 export function AppSidebar({
@@ -107,7 +109,7 @@ export function AppSidebar({
                         isActive={pathname.startsWith(item.url)}
                         tooltip={item.title}
                         render={
-                          <Link href={item.url}>
+                          <Link href={item.url} {...(item.external ? { target: "_blank", rel: "noopener" } : {})}>
                             <Icon />
                             <span>{item.title}</span>
                           </Link>

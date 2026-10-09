@@ -256,6 +256,12 @@ function LoginForm() {
       <p className="text-muted-foreground mt-6 text-center text-xs lg:text-left">
         Access is provisioned by your administrator. Contact them for a password reset.
       </p>
+      <p className="mt-3 text-center text-sm lg:text-left">
+        New here?{" "}
+        <a href="/guide" target="_blank" rel="noopener" className="text-primary font-medium hover:underline">
+          Read the how-to guide
+        </a>
+      </p>
     </div>
   );
 }

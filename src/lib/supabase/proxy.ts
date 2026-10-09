@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+// /guide (and /guide.html) is the staff how-to page — readable before signing in
+const PUBLIC_PATHS = ["/login", "/auth", "/guide"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
