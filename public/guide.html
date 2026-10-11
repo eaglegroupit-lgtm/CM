@@ -175,6 +175,13 @@ pre { background: var(--surface); border: 1px solid var(--line); border-radius: 
 
 footer { max-width: 1120px; margin: 0 auto; padding: 0 16px 40px; color: var(--muted); font-size: 13px; }
 
+
+/* how-to clips: looping muted videos that play only while on screen */
+.clip { margin: 14px 0 20px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.clip video { display: block; width: 100%; height: auto; aspect-ratio: 1024 / 700; background: var(--line); cursor: pointer; }
+.clip figcaption { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 8px 12px; font-size: 14px; color: var(--muted); border-top: 1px solid var(--line); }
+.clip figcaption b { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; background: var(--tape); color: var(--tape-ink); padding: 2px 6px; border-radius: 4px; }
+
 @media (max-width: 860px) {
   .shell { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .rail { position: static; }
@@ -226,6 +233,7 @@ footer { max-width: 1120px; margin: 0 auto; padding: 0 16px 40px; color: var(--m
         <li><span class="ui">Sign in</span> adi. Done, ulla vandhaachu.</li>
         <li>Password marandhutta? Panic aagadha bro — <b>Owner</b> kitta sollu, avanga pudhu password set pannuvaanga.</li>
       </ol>
+      <figure class="clip"><video src="/guide-media/login.mp4" poster="/guide-media/login.jpg" muted loop playsinline preload="none" aria-label="Email, password, Sign in — straight-aa Dashboard-ku."></video><figcaption><b>Watch</b>Email, password, Sign in — straight-aa Dashboard-ku.</figcaption></figure>
       <div class="note warn"><b class="tag">Careful da</b>Demo passwords udane maathidu. Website public-la irukku, lowkey risky.</div>
     </section>
 
@@ -290,6 +298,8 @@ footer { max-width: 1120px; margin: 0 auto; padding: 0 16px 40px; color: var(--m
           </ul>
         </li>
       </ol>
+      <figure class="clip"><video src="/guide-media/sale.mp4" poster="/guide-media/sale.jpg" muted loop playsinline preload="none" aria-label="Walk-in customer: 2 sheet plywood + 6 hinge, UPI-la pay — bill ready, stock auto-kurayum."></video><figcaption><b>Watch</b>Walk-in customer: 2 sheet plywood + 6 hinge, UPI-la pay — bill ready, stock auto-kurayum.</figcaption></figure>
+      <figure class="clip"><video src="/guide-media/credit-sale.mp4" poster="/guide-media/credit-sale.jpg" muted loop playsinline preload="none" aria-label="Contractor credit sale: customer select, Credit (pay later), vandi number, Save."></video><figcaption><b>Watch</b>Contractor credit sale: customer select, Credit (pay later), vandi number, Save.</figcaption></figure>
       <div class="note warn"><b class="tag">Rule</b>Walk-in Customer-kku credit kidaiyaadhu. Credit-na proper customer peyar podanum.</div>
       <div class="note tip"><b class="tag">Pro tip</b>Stock thaana kurayum — manual update venaam. Pazhaya bill reprint: <span class="ui">Previous Entries</span> tab → bill number → <span class="ui">Print Bill</span>.</div>
     </section>
@@ -304,6 +314,7 @@ footer { max-width: 1120px; margin: 0 auto; padding: 0 16px 40px; color: var(--m
         <li><span class="ui">Supplier's bill no.</span> — supplier invoice number podu (pinnadi thedurathukku useful).</li>
         <li><span class="ui">Save Purchase</span>.</li>
       </ol>
+      <figure class="clip"><video src="/guide-media/purchase.mp4" poster="/guide-media/purchase.jpg" muted loop playsinline preload="none" aria-label="Supplier select, 20 sheet commercial ply, supplier bill no. podu, Save — stock koodum."></video><figcaption><b>Watch</b>Supplier select, 20 sheet commercial ply, supplier bill no. podu, Save — stock koodum.</figcaption></figure>
       <div class="note tip"><b class="tag">FYI</b>Stock thaana koodum. Supplier-kku kudukka vendiyadhu "To Pay"-la serum.</div>
     </section>
 
@@ -317,6 +328,7 @@ footer { max-width: 1120px; margin: 0 auto; padding: 0 16px 40px; color: var(--m
         <li><span class="ui">Received in</span> — Cash or Bank (UPI / cheque / NEFT). Ref number optional.</li>
         <li><span class="ui">Save Money Received</span>.</li>
       </ol>
+      <figure class="clip"><video src="/guide-media/money-received.mp4" poster="/guide-media/money-received.jpg" muted loop playsinline preload="none" aria-label="Pending bills theriyum → Receive full amount → Bank → Save. Ellaa bill-um cleared."></video><figcaption><b>Watch</b>Pending bills theriyum → Receive full amount → Bank → Save. Ellaa bill-um cleared.</figcaption></figure>
       <div class="note tip"><b class="tag">Smart-u</b>App thaana pazhaya bill-la irundhu adjust pannum (oldest first). Adhigama kuduthaa adhu advance-aa irukkum.</div>
     </section>
 
@@ -335,6 +347,7 @@ footer { max-width: 1120px; margin: 0 auto; padding: 0 16px 40px; color: var(--m
         <li><span class="ui">Expense for</span> — Shop Rent, Staff Salary, Electricity Bill, Transport &amp; Freight, Loading &amp; Unloading, Tea &amp; Refreshments, Telephone &amp; Internet, Other Expenses.</li>
         <li>Amount, Cash / Bank → <span class="ui">Save Payment</span>.</li>
       </ol>
+      <figure class="clip"><video src="/guide-media/expense.mp4" poster="/guide-media/expense.jpg" muted loop playsinline preload="none" aria-label="Shop Expense tab → Tea &amp; Refreshments → ₹450 → Save. Avlo dhaan."></video><figcaption><b>Watch</b>Shop Expense tab → Tea &amp; Refreshments → ₹450 → Save. Avlo dhaan.</figcaption></figure>
       <div class="note tip"><b class="tag">New expense type?</b>Diesel maadhiri pudhusa venum-a? <a href="#cash">Cash, Bank &amp; Expenses</a> page-la add pannu.</div>
     </section>
 
@@ -346,6 +359,7 @@ footer { max-width: 1120px; margin: 0 auto; padding: 0 16px 40px; color: var(--m
         <li><span class="ui">Refund</span> — Cash / Bank (panam thirumba kuduthom) or <span class="ui">Adjust against a pending bill</span> (baaki bill-la kazhichidu).</li>
         <li>Return items &amp; qty podu → <span class="ui">Save Sales Return</span>. Stock thirumba koodum.</li>
       </ol>
+      <figure class="clip"><video src="/guide-media/sales-return.mp4" poster="/guide-media/sales-return.jpg" muted loop playsinline preload="none" aria-label="Walk-in customer padlock return pannaaru → cash refund → stock back."></video><figcaption><b>Watch</b>Walk-in customer padlock return pannaaru → cash refund → stock back.</figcaption></figure>
       <h3>Purchase Return — damage porul supplier-kku back</h3>
       <ol class="steps">
         <li><span class="ui">Daily Entries</span> → <span class="ui">Purchase Return</span> → supplier select.</li>
@@ -372,6 +386,8 @@ footer { max-width: 1120px; margin: 0 auto; padding: 0 16px 40px; color: var(--m
         </tbody>
       </table></div>
       <p><span class="ui">Add Item</span> adi. Done. Stock check panna mela Search box-la type pannu; <span class="ui">Low stock only</span> click pannina order panna vendiya items mattum varum.</p>
+      <figure class="clip"><video src="/guide-media/new-item.mp4" poster="/guide-media/new-item.jpg" muted loop playsinline preload="none" aria-label="New Item → name, category, unit, brand, size, price, stock → Add Item."></video><figcaption><b>Watch</b>New Item → name, category, unit, brand, size, price, stock → Add Item.</figcaption></figure>
+      <figure class="clip"><video src="/guide-media/stock-search.mp4" poster="/guide-media/stock-search.jpg" muted loop playsinline preload="none" aria-label="Stock Report-la "greenply" search, apram Low stock only filter."></video><figcaption><b>Watch</b>Stock Report-la "greenply" search, apram Low stock only filter.</figcaption></figure>
     </section>
 
     <section id="parties">
@@ -408,6 +424,7 @@ footer { max-width: 1120px; margin: 0 auto; padding: 0 16px 40px; color: var(--m
         </tbody>
       </table></div>
       <div class="note warn"><b class="tag">Heads up</b>Profit &amp; Loss-la innum closing stock (shelf stock value) serkala. Niraya stock vaangina maasam nashtam maadhiri kaatum — panic aagadha, Stock Report value-vum serthu paaru.</div>
+      <figure class="clip"><video src="/guide-media/pending.mp4" poster="/guide-media/pending.jpg" muted loop playsinline preload="none" aria-label="Pending Payments: yaaru evvalavu naal late-nu red badge-la. ☰ adichaa menu maraiyum."></video><figcaption><b>Watch</b>Pending Payments: yaaru evvalavu naal late-nu red badge-la. ☰ adichaa menu maraiyum.</figcaption></figure>
     </section>
 
     <section id="settings">
@@ -487,5 +504,25 @@ npm run seed:demo</pre>
 </div>
 
 <footer>Hardware &amp; Plywood billing app · user guide · Oct 2026</footer>
+
+<script>
+// Play each clip only while it is on screen; tap a clip to pause or resume.
+(() => {
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const videos = document.querySelectorAll(".clip video");
+  videos.forEach((v) => {
+    if (reduce) { v.controls = true; return; }
+    v.addEventListener("click", () => { v.dataset.paused = v.paused ? "" : "1"; v.paused ? v.play() : v.pause(); });
+  });
+  if (reduce || !("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(({ target: v, isIntersecting }) => {
+      if (isIntersecting && !v.dataset.paused) { v.preload = "auto"; v.play().catch(() => {}); }
+      else if (!isIntersecting) v.pause();
+    });
+  }, { threshold: 0.4 });
+  videos.forEach((v) => io.observe(v));
+})();
+</script>
 </body>
 </html>
